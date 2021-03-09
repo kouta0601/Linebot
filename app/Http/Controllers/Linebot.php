@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Libs\LineSdk\LineBotTiny;
+use App\Tabelogdata;
+
 
 /**
  *
@@ -44,33 +46,67 @@ class Linebot extends Controller
                     $message = $event['message'];
 
                     // メッセージのタイプ
-                    switch ($message['type']) {
+                    if ($message['type'] == 'text') {
 
-                            // メッセージタイプがテキストの場合
-                        case 'text':
-                            // DBから検索し、文字列を返す
-                            // モデルへアクセスし、値を取得
-                            // $sendText = '';
+                        // メッセージが『おすすめのお店』の場合はお店情報を返す
+                        switch ($message['text']) {
 
+                            case 'おすすめのお店':
 
-                            $client->replyMessage([
-                                'replyToken' => $event['replyToken'],
-                                'messages' => [
-                                    [
-                                        'type' => 'text',
-                                        'text' => $message['text']
-                                        // DBから検索し、文字列を返す
-                                        // 'text' => $sendText
+                                // ランダムでID番号を取得
+                                $min = 1;
+                                $max = 1736;
+                                $id_number = mt_rand($min, $max);
+                                // テーブルからデータ取得
+                                $data = Tabelogdata::find($id_number);
+
+                                // 各データを変数に代入
+                                $url = $data->url;
+                                $name = $data->name;
+                                $review = $data->review;
+                                $type = $data->type;
+                                $address = $data->address;
+
+                                // 返信内容
+                                $client->replyMessage([
+                                    'replyToken' => $event['replyToken'],
+                                    'messages' => [
+
+                                        [
+                                            'type' => 'text',
+                                            'text' => "オススメのお店" . "\n" .
+                                                "□URL" . "\n" . $url .  "\n" .
+                                                "□店名" . "\n" . $name . "\n"  .
+                                                "□レビュー数" . "\n" . $review . "\n" .
+                                                "□ジャンル" . "\n" . $type . "\n"  .
+                                                "□住所" . "\n" . $address
+                                        ]
+
                                     ]
-                                ]
-                            ]);
+                                ]);
+                                break;
 
-                            break;
+                                // メッセージが『おすすめのお店』ではない場合
+                            default:
 
-                            // メッセージタイプがテキスト以外の場合、エラー処理にエラーメッセージを送信
-                        default:
-                            Log::error('Unsupported message type: ' . $message['type']);
-                            break;
+                                $client->replyMessage([
+                                    'replyToken' => $event['replyToken'],
+                                    'messages' => [
+
+                                        [
+                                            'type' => 'text',
+                                            'text' => '『おすすめのお店』と入力してください'
+                                        ]
+
+                                    ]
+                                ]);
+
+                                break;
+                        }
+
+                        // メッセージタイプがテキスト以外の場合、エラー処理にエラーメッセージを送信
+                    } else {
+                        Log::error('Unsupported message type: ' . $message['type']);
                     }
 
                     break;
